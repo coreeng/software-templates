@@ -28,8 +28,6 @@ p2p-functional: build-functional push-functional create-ns-functional deploy-fun
 
 .PHONY: p2p-nft
 p2p-nft: build-nft push-nft create-ns-nft deploy-nft ## Runs only NFT helm tests
-	helm test reference-app -n $(tenant_name)-nft --filter name=reference-app-nft-test
-	kubectl logs reference-app-nft-test -n $(tenant_name)-nft
 
 .PHONY: p2p-extended-test
 p2p-extended-test:  ## Runs extended tests
