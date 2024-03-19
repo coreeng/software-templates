@@ -58,7 +58,7 @@ create-ns-nft: ## Create namespace for NF tests
 
 .PHONY: lint
 lint: ## Linting go code
-	docker run -v "$$(pwd)":/var/app ghcr.io/mgechev/revive:v1.3.2  -config /var/app/revive.toml -formatter stylish  ./var/app/cmd/service ./var/app/cmd/handler
+	docker run -v "$$(pwd)":/var/app ghcr.io/mgechev/revive:v1.3.7  -config /var/app/revive.toml -formatter stylish  ./var/app/cmd/service ./var/app/cmd/handler
 
 .PHONY: service-build
 service-build:
