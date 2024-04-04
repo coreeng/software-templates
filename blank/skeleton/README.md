@@ -1,6 +1,6 @@
-# Golang Web application
+# Blank application
 
-Golang Web application for the CECG Developer Platform.
+Blank application for the CECG Developer Platform.
 
 An app includes a configuration for the Path to Production, including:
 * Functional Tests
