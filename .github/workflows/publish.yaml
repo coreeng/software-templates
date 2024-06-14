@@ -1,8 +1,8 @@
 name: Publish rendered templates
 
 on:
+  pull_request:
   workflow_dispatch:
-    inputs: {}
 
 jobs:
   render:
