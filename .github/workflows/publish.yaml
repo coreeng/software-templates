@@ -1,0 +1,19 @@
+name: Publish rendered templates
+
+on:
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: robinraju/release-downloader@v1.10
+        with:
+          repo: coreeng/corectl
+          latest: true
+          fileName: corectl_Linux_x86_64.tar.gz
+          extract: true
+          out-file-path: corectl
+      - run: |
+          ls -la
