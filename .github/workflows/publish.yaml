@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: robinraju/release-downloader@v1.10
         with:
-          repo: coreeng/corectl
+          repository: coreeng/corectl
           latest: true
           fileName: corectl_Linux_x86_64.tar.gz
           extract: true
