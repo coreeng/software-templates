@@ -48,7 +48,6 @@ create-ns-nft: ## Create namespace for NF tests
 
 .PHONY: lint
 lint: ## Linting the code
-	exit 1
 	@echo '### LINT ###'
 
 .PHONY: service-build
