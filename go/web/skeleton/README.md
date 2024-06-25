@@ -1,6 +1,6 @@
-# CECG IDP Reference Application - GoLang
+# GoLang Web
 
-Reference Golang application for the CECG Developer Platform.
+Golang application for the Core Platform.
 
 # Path to Production
 
@@ -9,7 +9,7 @@ There are a few variables that you need to set up in order for this to work. On 
 For each of these, you'll need these variables:
 - `BASE_DOMAIN`: The base domain configured on the deployment, prefixed by the environment (e.g. `gcp-dev.cecg.platform.cecg.io`)
 - `INTERNAL_SERVICES_DOMAIN`: The internal services domain configured on the deployment, prefixed by the environment (e.g. `gcp-dev-internal.cecg.platform.cecg.io`)
-- `DPLATFORM`: As defined by `environment` attribute in your developer platform config file (e.g. `gcp-dev`)
+- `DPLATFORM`: As defined by `environment` attribute in your core platform config file (e.g. `gcp-dev`)
 - `PROJECT_ID`: The GCP Id of the project. You can see this in the GCP console page. (e.g. `core-platform-ab1234de`)
 - `PROJECT_NUMBER`: Similar to project id, this is the numeric value for the GCP project. You can see this value in GCP console next to the project id. (e.g. `123456789012`)
 
@@ -87,7 +87,7 @@ export REGISTRY=europe-west2-docker.pkg.dev/MY_PROJECT_ID/tenant
 For ingress to be configured correctly you'll need to set up the environment that you want to deploy to, as well as the base url to be used. 
 This must match one of the `ingress_domains` configured for that environment. For example, inside CECG we have an environment called `gcp-dev` that's ingress domain is set to `gcp-dev.cecg.platform.cecg.io`.
 
-This reference app assumes `<environment>.<domain>`, check with your deployment of the CECG developer platform if this is the case.
+This reference app assumes `<environment>.<domain>`, check with your deployment of the Core Platform if this is the case.
 
 This will construct the base URL as `<environment>.<domain>`, for example, `gcp-dev.cecg.platform.cecg.io`.
 
