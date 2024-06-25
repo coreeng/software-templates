@@ -1,4 +1,4 @@
-# Reference Application - Java
+# Java Web
 
 ## Path to Production (P2P) Interface
 
