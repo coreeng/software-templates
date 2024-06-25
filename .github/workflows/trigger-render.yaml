@@ -1,0 +1,21 @@
+name: Trigger Rendering Workflow
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  trigger-rendering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TEMPLATES_RENDER_GH_TOKEN }}
+          script: |
+            await github.rest.actions.createworkflowDispatch({
+              owner: 'coreeng',
+              repo: 'reference-apps',
+              workflow_id: 'render-templates.yaml',
+              ref: 'main'
+            })
