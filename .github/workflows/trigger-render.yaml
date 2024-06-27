@@ -15,7 +15,7 @@ jobs:
           script: |
             await github.rest.actions.createWorkflowDispatch({
               owner: 'coreeng',
-              repo: 'reference-apps',
+              repo: 'core-platform-reference-applications',
               workflow_id: 'render-templates.yaml',
               ref: 'main'
             })
