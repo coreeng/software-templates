@@ -2,7 +2,7 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 os := $(shell uname)
 image_tag = $(VERSION)
 image_name = go-reference-app
-tenant_name = reference-applications
+tenant_name = golang
 
 FAST_FEEDBACK_PATH = fast-feedback
 EXTENDED_TEST_PATH = extended-test
@@ -29,35 +29,26 @@ help-all:
 
 # P2P tasks
 
-.PHONY: p2p-image
-p2p-image:
-	@echo $(image_name)
-
 .PHONY: p2p-build
 p2p-build: lint service-build service-push ## Builds the service image and pushes it to the registry
 
 .PHONY: p2p-functional
 p2p-functional: namespace = $(tenant_name)-functional
-p2p-functional: build-functional push-functional create-ns-functional deploy-functional ## Runs only functional helm tests
-	helm test reference-app -n $(namespace) --filter name=reference-app-functional-test
-	@echo Logs: $(call logs_url,"reference-app-functional-test",$(current_timestamp))
+p2p-functional: build-functional push-functional create-ns-functional ## Runs only functional helm tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set tenantName=$(tenant_name) --set functional.image=$(image_name)-functional --set tag=$(image_tag)
 
 .PHONY: p2p-nft
 p2p-nft: namespace = $(tenant_name)-nft
-p2p-nft: build-nft push-nft create-ns-nft deploy-nft ## Runs only NFT helm tests
-	helm test reference-app -n $(namespace) --filter name=reference-app-nft-test
-	@echo Logs: $(call logs_url,"reference-app-nft-test",$(current_timestamp))
+p2p-nft: build-nft push-nft create-ns-nft ## Runs only NFT helm tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set tenantName=$(tenant_name) --set nft.image=$(image_name)-nft --set tag=$(image_tag)
 
 .PHONY: p2p-extended-test
-p2p-extended-test: build-extended push-extended create-ns-extended deploy-extended  ## Runs extended tests
-	@if [ "$(RUN_EXTENDED_TEST)" != "true" ] ; then \
-		echo "Skipping extended test" ; \
-	else \
-		$(MAKE) run-extended ; \
-	fi
+p2p-extended-test: build-extended push-extended create-ns-extended  ## Runs extended tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(EXTENDED_TEST_PATH) --set tenantName=$(tenant_name) --set extended.image=$(image_name)-nft --set extended.enabled=true --set tag=$(image_tag)
 
 .PHONY: p2p-prod
-p2p-prod: deploy-prod ## Deploy helm chart of the reference app to production namespace
+p2p-prod: ## Deploy helm chart of the reference app to production namespace
+	helm upgrade --install go-sample-app coreeng/sample-app -n $(tenant_name) --set appName=$(image_name) --set registry=$(REGISTRY)/$(PROD_PATH) --set ingress.domain=$(BASE_DOMAIN) --set tenantName=$(tenant_name) --set image=$(image_name) --set tag=$(image_tag) --atomic
 
 ## Namespace creation
 
@@ -123,61 +114,10 @@ push-nft: ## Push the NFT Docker image to an image registry
 push-extended:
 	docker image push $(REGISTRY)/$(EXTENDED_TEST_PATH)/$(image_name)-extended:$(image_tag)
 
-.PHONY: deploy-functional
-deploy-functional: ## Deploy helm chart of the reference app to functional namespace
-	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name)-functional --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set domain=$(BASE_DOMAIN) --set appUrlSuffix="-$(tenant_name)-functional" --set tag=$(image_tag) --set tenantName=$(tenant_name) --atomic
-	helm list -n $(tenant_name)-functional ## list installed charts in the given tenant namespace
-
-.PHONY: deploy-nft
-deploy-nft:  ## Deploy helm chart of the reference app to nft namespace
-	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name)-nft \
-		--set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) \
-		--set domain=$(BASE_DOMAIN) \
-		--set appUrlSuffix="-$(tenant_name)-nft" \
-		--set tag=$(image_tag) \
-		--set wiremock.enabled=true \
-		--set monitoring=$(MONITORING) \
-		--set dashboarding=$(DASHBOARDING) \
-		--set tenantName=$(tenant_name) \
-		--atomic
-	helm list -n $(tenant_name)-nft ## list installed charts in the given tenant namespace
-
-.PHONY: deploy-extended
-deploy-extended:
-	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name)-extended \
-		--set registry=$(REGISTRY)/$(EXTENDED_TEST_PATH) \
-		--set domain=$(BASE_DOMAIN) \
-		--set appUrlSuffix="-$(tenant_name)-extended" \
-		--set tag=$(image_tag) \
-		--set service.replicas=$(extended_test_replicas) \
-		--set wiremock.enabled=true \
-		--set wiremock.replicas=$(extended_test_replicas) \
-		--set monitoring=$(MONITORING) \
-		--set dashboarding=$(DASHBOARDING) \
-		--set tenantName=$(tenant_name) \
-		--atomic
-	helm list -n $(tenant_name)-extended
-
-.PHONY: run-extended
-run-extended: namespace = $(tenant_name)-extended
-run-extended:
-	helm test reference-app -n $(namespace) --filter name=reference-app-extended-test
-	kubectl wait --for=jsonpath='{.status.stage}'=finished testrun/reference-app-extended-test -n $(namespace) --timeout $(extended_test_wait_timeout)
-	helm test reference-app -n $(namespace) --filter name=reference-app-extended-test-validate
-	@echo Logs: $(call logs_url,"reference-app-extended-test-validate",$(current_timestamp))
-
-.PHONY: deploy-k6-operator
-deploy-k6-operator:
-	helm repo add grafana https://grafana.github.io/helm-charts
-	helm repo update
-	helm install k6-operator grafana/k6-operator
-
-.PHONY: deploy-prod
-deploy-prod: ## Deploy helm chart of the reference app to production namespace
-	@echo $(image_tag)
-	@echo $(REGISTRY)/release
-	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name) --set registry=$(REGISTRY)/$(PROD_PATH) --set domain=$(BASE_DOMAIN)  --set tag=$(image_tag) --set tenantName=$(tenant_name) --atomic
-	helm list -n $(tenant_name) ## list installed charts in the given tenant namespace
+.PHONY: deploy-dev
+deploy-dev:  ## Deploy helm chart of the reference app to dev namespace
+	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name)-dev --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set domain=$(ENVIRONMENT).$(BASE_URL) --set appUrlSuffix="-dev"--set tenantName=$(tenant_name) --atomic
+	helm list -n $(tenant_name)-dev ## list installed charts in the given tenant namespace
 
 .PHONY: p2p-promote-generic
 p2p-promote-generic:  ## Generic promote functionality
