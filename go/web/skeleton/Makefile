@@ -2,13 +2,22 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 os := $(shell uname)
 image_tag = $(VERSION)
 image_name = go-reference-app
+tenant_name = golang
 
 FAST_FEEDBACK_PATH = fast-feedback
 EXTENDED_TEST_PATH = extended-test
 PROD_PATH = prod
 
-NETWORK_NAME = $(image_name)
-SERVICE_CONTAINER_NAME = service-container
+MONITORING=false
+DASHBOARDING=false
+RUN_EXTENDED_TEST=false
+
+extended_test_replicas = 0 # until we have autoscaling working
+extended_test_wait_timeout = 15m
+
+logs_start = "$(shell date +%s)"
+current_timestamp = $$(date +%s)
+logs_url = "https://grafana.$(INTERNAL_SERVICES_DOMAIN)/explore?orgId=1&left=%7B%22datasource%22:%22CloudLogging%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22queryText%22:%22resource.type%3D%5C%22k8s_container%5C%22%5Cnresource.labels.namespace_name%3D%5C%22$(namespace)%5C%22%5Cnresource.labels.pod_name%3D%5C%22$(1)%5C%22%22,%22projectId%22:%22$(PROJECT_ID)%22,%22bucketId%22:%22global%2Fbuckets%2F_Default%22,%22viewId%22:%22_AllLogs%22%7D%5D,%22range%22:%7B%22from%22:%22$(logs_start)000%22,%22to%22:%22$(2)000%22%7D%7D"
 
 .PHONY: help-p2p
 help-p2p:
@@ -24,21 +33,48 @@ help-all:
 p2p-build: lint service-build service-push ## Builds the service image and pushes it to the registry
 
 .PHONY: p2p-functional
-p2p-functional: build-functional push-functional p2p-prod ## Runs functional tests
-	docker run --network $(NETWORK_NAME) -e SERVICE_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 -e INGRESS_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 $(REGISTRY)/$(FAST_FEEDBACK_PATH)/$(image_name)-functional:$(image_tag)
+p2p-functional: namespace = $(tenant_name)-functional
+p2p-functional: build-functional push-functional create-ns-functional ## Runs only functional helm tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set tenantName=$(tenant_name) --set functional.image=$(image_name)-functional --set tag=$(image_tag)
 
 .PHONY: p2p-nft
-p2p-nft: build-nft push-nft p2p-prod ## Runs non functional tests
-	docker run --network $(NETWORK_NAME) -e SERVICE_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 -e INGRESS_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 $(REGISTRY)/$(FAST_FEEDBACK_PATH)/$(image_name)-nft:$(image_tag) run ./load-testing/hello.js
+p2p-nft: namespace = $(tenant_name)-nft
+p2p-nft: build-nft push-nft create-ns-nft ## Runs only NFT helm tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set tenantName=$(tenant_name) --set nft.image=$(image_name)-nft --set tag=$(image_tag)
 
 .PHONY: p2p-extended-test
-p2p-extended-test: p2p-prod  ## Runs extended tests
-	docker run --network $(NETWORK_NAME) -e SERVICE_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 -e INGRESS_ENDPOINT=http://$(SERVICE_CONTAINER_NAME):8080 $(REGISTRY)/$(EXTENDED_TEST_PATH)/$(image_name)-extended:$(image_tag) run ./load-testing/hello.js
+p2p-extended-test: build-extended push-extended create-ns-extended  ## Runs extended tests
+	helm upgrade --install go-sample-app-test coreeng/sample-app-test -n $(namespace) --set appName=$(image_name) --set registry=$(REGISTRY)/$(EXTENDED_TEST_PATH) --set tenantName=$(tenant_name) --set extended.image=$(image_name)-nft --set extended.enabled=true --set tag=$(image_tag)
 
 .PHONY: p2p-prod
-p2p-prod: service-run ## Runs the service
+p2p-prod: ## Deploy helm chart of the reference app to production namespace
+	helm upgrade --install go-sample-app coreeng/sample-app -n $(tenant_name) --set appName=$(image_name) --set registry=$(REGISTRY)/$(PROD_PATH) --set ingress.domain=$(BASE_DOMAIN) --set tenantName=$(tenant_name) --set image=$(image_name) --set tag=$(image_tag) --atomic
+
+## Namespace creation
+
+.PHONY: create-ns-functional
+create-ns-functional: env=functional
+create-ns-functional: create-namespace 
+
+.PHONY: create-ns-nft
+create-ns-nft: env=nft
+create-ns-nft: create-namespace 
+
+.PHONY: create-ns-extended
+create-ns-extended: env=extended
+create-ns-extended: create-namespace 
+
 
 ## Internal Tasks, not part of the P2P
+
+.PHONY: create-namespace
+create-namespace:
+	awk -v NAME="$(tenant_name)" -v ENV="$(env)" '{ \
+		sub(/{tenant_name}/, NAME);  \
+		sub(/{env}/, ENV);  \
+		print;  \
+	}' resources/subns-anchor.yaml | kubectl apply -f -
+
 .PHONY: lint
 lint: ## Linting go code
 	docker run -v "$$(pwd)":/var/app ghcr.io/mgechev/revive:v1.3.2  -config /var/app/revive.toml -formatter stylish  ./var/app/cmd/service ./var/app/cmd/handler
@@ -46,14 +82,10 @@ lint: ## Linting go code
 .PHONY: service-build
 service-build:
 	docker build --file Dockerfile --tag $(REGISTRY)/$(FAST_FEEDBACK_PATH)/$(image_name):$(image_tag) .
-
+	
 .PHONY: service-push
 service-push: ## Push the service image
 	docker image push $(REGISTRY)/$(FAST_FEEDBACK_PATH)/$(image_name):$(image_tag)
-
-.PHONY: service-run
-service-run: create-network
-	docker run --name $(SERVICE_CONTAINER_NAME) --network $(NETWORK_NAME) -p 8080:8080 -d $(REGISTRY)/$(image_name):$(image_tag) || true
 
 p2p-build: lint 
 	docker build --file Dockerfile --tag $(REGISTRY)/$(image_name):$(image_tag) .
@@ -82,6 +114,11 @@ push-nft: ## Push the NFT Docker image to an image registry
 push-extended:
 	docker image push $(REGISTRY)/$(EXTENDED_TEST_PATH)/$(image_name)-extended:$(image_tag)
 
+.PHONY: deploy-dev
+deploy-dev:  ## Deploy helm chart of the reference app to dev namespace
+	helm upgrade --install reference-app helm-charts/reference-app -n $(tenant_name)-dev --set registry=$(REGISTRY)/$(FAST_FEEDBACK_PATH) --set domain=$(ENVIRONMENT).$(BASE_URL) --set appUrlSuffix="-dev"--set tenantName=$(tenant_name) --atomic
+	helm list -n $(tenant_name)-dev ## list installed charts in the given tenant namespace
+
 .PHONY: p2p-promote-generic
 p2p-promote-generic:  ## Generic promote functionality
 	@echo "$(red) Retagging version ${image_tag} from $(SOURCE_REGISTRY) to $(REGISTRY)"
@@ -92,10 +129,6 @@ p2p-promote-generic:  ## Generic promote functionality
 	@echo "$(red) Pushing version ${image_tag}"
 	export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=$(DEST_AUTH_OVERRIDE) ; \
 	docker push $(REGISTRY)/$(dest_repo_path)/$(image_name):${image_tag}
-
-.PHONY: create-network
-create-network:
-	docker network create $(NETWORK_NAME) || true
 
 .PHONY: p2p-promote-to-extended-test
 p2p-promote-to-extended-test: source_repo_path=$(FAST_FEEDBACK_PATH)
