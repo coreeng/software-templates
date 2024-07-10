@@ -10,10 +10,23 @@ permissions:
   id-token: write
 
 jobs:
+  get-image-name:
+    runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.image-name.outputs.image_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: image-name
+        run: |
+          image="$(make p2p-image)"
+          echo "Image name: '$image'"
+          echo "image_name=$image" >> $GITHUB_OUTPUT
+
   get-latest-version:
+    needs: [get-image-name]
     uses: coreeng/p2p/.github/workflows/p2p-get-latest-image-extended-test.yaml@v1
     with:
-      image-name: go-reference-app
+      image-name: ${{ needs.get-image-name.outputs.image-name }}
 
   extendedtests:
     needs: [get-latest-version]

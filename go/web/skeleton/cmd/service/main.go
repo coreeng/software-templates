@@ -25,7 +25,7 @@ func main() {
 	}
 	provider := metric.NewMeterProvider(metric.WithReader(exporter))
 
-	router, err := handler.Router(provider)
+	router, err := handler.Router()
 	if err != nil {
 		log.Fatalf("Failed to create router: %+v", err)
 	}

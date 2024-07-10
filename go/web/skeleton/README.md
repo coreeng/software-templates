@@ -2,22 +2,14 @@
 
 Golang application for the Core Platform.
 
-# Path to Production
+# Parameters
+Update main parameters of templates in `Makefile`:
+- `app_name` - name of the application. it defines the name of the images produced by the Makefile targets, kubernetes resources, etc.
+- `tenant_name` - tenant of the application. it defines target namespaces to deploy the application, deployed monitoring stack to associate the application to, etc.
+
+# Path to Production (P2P)
 
 The P2P uses GitHub Actions to interact with the platform.
-There are a few variables that you need to set up in order for this to work. On the repositories' web page, navigate to `Settings -> Environments` and ensure you have `gcp-dev` and `gcp-prod` environments created.
-For each of these, you'll need these variables:
-- `BASE_DOMAIN`: The base domain configured on the deployment, prefixed by the environment (e.g. `gcp-dev.cecg.platform.cecg.io`)
-- `INTERNAL_SERVICES_DOMAIN`: The internal services domain configured on the deployment, prefixed by the environment (e.g. `gcp-dev-internal.cecg.platform.cecg.io`)
-- `DPLATFORM`: As defined by `environment` attribute in your core platform config file (e.g. `gcp-dev`)
-- `PROJECT_ID`: The GCP Id of the project. You can see this in the GCP console page. (e.g. `core-platform-ab1234de`)
-- `PROJECT_NUMBER`: Similar to project id, this is the numeric value for the GCP project. You can see this value in GCP console next to the project id. (e.g. `123456789012`)
-
-In addition, you need to make sure that you have a repository environment variables with:
-- `TENANT_NAME`: Name of your tenant. There is a namespace created with the same name as your tenant and that will be used as a parent namespace.
-- `FAST_FEEDBACK`=`{"include": [{"deploy_env": "gcp-dev"}]}` - Defines which environment the fast feedback pipeline runs on
-- `EXTENDED_TEST`=`{"include": [{"deploy_env": "gcp-dev"}]}` -  Defines which environment the extended tests pipeline runs on
-- `PROD`=`{"include": [{"deploy_env": "gcp-prod"}]}` -  Defines which environment the production pipeline runs on
 
 As part of the P2P, using Hierarchical Namespace Controller, child namespaces will be created:
 - `<tenant-name>-functional`
@@ -32,15 +24,6 @@ The application is deployed to each of this following the shape:
 The tests are executed as helm tests. For that to work, each test phase is packaged in a docker image and pushed to a registry. 
 It's then executed after the deployment of the respective environment to ensure the service is working correctly.
 
-## P2P interface
-
-The P2P uses the `Makefile` to deploy and test the application. It expects these tasks to exist:
-* `p2p-build` - Builds the service image and pushes it to the registry
-* `p2p-functional` - Runs only functional helm tests
-* `p2p-nft` - Runs only NFT helm tests
-* `p2p-extended-test` - Runs only extended helm tests
-* `p2p-promote-to-extended-test` - Promotes the images when running on main branch and both NFT and Functional steps are successful 
-
 You can run `make help-p2p` to list the available p2p functions or `help-all` to see all available functions.
 
 #### Requirements
@@ -53,9 +36,8 @@ For everything to work for you locally you need to ensure you have the following
 * Helm
 
 #### Prerequisites for local run
-
-* GCloud login - `gcloud auth login` 
-* GCloud registry login, e.g. `gcloud auth configure-docker europe-west2-docker.pkg.dev`
+To run the P2P locally, you need to connect to a cloud development environment.
+The easiest way to [do that is using `corectl`](https://docs.gcp-prod.cecg.platform.cecg.io/platform/#using-corectl).
 
 #### Image Versioning
 
@@ -79,12 +61,13 @@ DOCKER_DEFAULT_PLATFORM="linux/amd64" make p2p-build
 
 There's a shared tenant registry created `europe-west2-docker.pkg.dev/<project_id>/tenant`. You'll need to set your project_id and export this string as an environment variable called `REGISTRY`, for example:
 ```
-export REGISTRY=europe-west2-docker.pkg.dev/MY_PROJECT_ID/tenant
+export REGISTRY=europe-west2-docker.pkg.dev/<project_id>/tenant
 ```
 
 #### Ingress URL construction
 
-For ingress to be configured correctly you'll need to set up the environment that you want to deploy to, as well as the base url to be used. 
+For ingress to be configured correctly, 
+you'll need to set up the environment that you want to deploy to, as well as the base url to be used. 
 This must match one of the `ingress_domains` configured for that environment. For example, inside CECG we have an environment called `gcp-dev` that's ingress domain is set to `gcp-dev.cecg.platform.cecg.io`.
 
 This reference app assumes `<environment>.<domain>`, check with your deployment of the Core Platform if this is the case.
@@ -94,6 +77,8 @@ This will construct the base URL as `<environment>.<domain>`, for example, `gcp-
 ```
 export BASE_DOMAIN=gcp-dev.cecg.platform.cecg.io 
 ```
+
+Read [more](https://docs.gcp-prod.cecg.platform.cecg.io/app/ingress/) about Ingress.
 
 #### Logs
 
@@ -115,24 +100,16 @@ This namespace is used to test the functionality of the app. Currently, using BD
 
 This namespace is used to test how the service behaves under load, e.g. 1_000 TPS, P99 latency < 500 ms for 3 minutes run.
 
-There are 2 endpoints available for testing:
+There are 1 endpoint available for testing:
 - `/hello` - simply returns `Hello world`.
-- `/downstream/path` - makes an HTTP call to another dependent service (downstream) and forwards the response.
 
 #### Load Generation
 
 We are using [K6](https://k6.io/) to generate constant load, collect metrics and validate them against thresholds.
 
-There are 2 test examples: `hello.js` and `downstream.js`.
+There is a test examples: [hello.js](./resources/load-testing/hello.js)
 
 `helm test` runs K6 scenario in a single Pod.
-
-#### Dependent Service (downstream)
-
-We are priming the dependencies with [WireMock](https://wiremock.org/).
-You can register stub responses either by creating static files or dynamically via Admin API.
-
-There is `setup()` function in `downstream.js` that shows how to create stubbed API responses dynamically.
 
 #### Platform Ingress
 
@@ -158,20 +135,8 @@ We are using [K6](https://k6.io/) to generate the load.
 We are using [K6 Operator](https://github.com/grafana/k6-operator) to run multiple jobs in parallel, so that we can reach high
 TPS requirements.
 
-We are using the same `downstream.js` as for NFT, but with different parameters.
-
 When running parallel jobs with K6 Operator we are not getting back the aggregated metrics at the end of the test.
 We are collecting the metrics with Prometheus and validating the results with `promtool`.
-
-#### Dependent Service (downstream)
-
-We are using [WireMock](https://wiremock.org/). See NFT section for more details.
-
-In general, WireMock has a very good performance, but you can reach its limits when running only 1 replica.
-You may need to run several replicas of WireMock to serve more requests. Be aware that dynamic stub definitions are
-stored in memory, so you need to register the stubs in each WireMock instance explicitly.
-
-We are deploying WireMock as a StatefulSet, so that we can set up each replica for our tests.
 
 #### Platform Ingress
 
@@ -215,11 +180,12 @@ This feature depends on metrics collected by `Service Monitor`.
 
 ### K6 Operator
 
-> K6 Operator must be present in the platform in order to run the extended test
+> K6 Operator must be enabled for the tenant to run the extended test
 
-You may install it with
-```
-make deploy-k6-operator
+You can enable it by enabling the beta feature in the tenant.yaml file:
+```yaml
+betaFeatures:
+  - k6-operator
 ```
 
 ## Limiting the CPU usage

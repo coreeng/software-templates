@@ -1,6 +1,6 @@
-module godogs
+module github.com/coreeng/idp-reference-app-go/functional
 
-go 1.21
+go 1.22
 
 require (
 	github.com/cucumber/godog v0.12.5
