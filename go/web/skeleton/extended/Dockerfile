@@ -16,7 +16,6 @@ COPY --from=prometheus /bin/promtool /usr/bin/promtool
 USER 12345
 WORKDIR /home/k6
 
-ADD ./extended/ /home/k6
 ADD ./resources/load-testing/ /home/k6/load-testing
 
 ENV K6_OUT=prometheus

@@ -4,18 +4,18 @@ kind: Ingress
 apiVersion: networking.k8s.io/v1
 metadata:
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: reference-app{{ .Values.appUrlSuffix }}.{{ $domain }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.appName }}{{ .Values.appUrlSuffix }}.{{ $domain }}
     external-dns.alpha.kubernetes.io/target: {{ $domain }}
-  name: reference-service
+  name: {{ .Values.appName }}
 spec:
   ingressClassName: platform-ingress
   rules:
-  - host: reference-app{{ .Values.appUrlSuffix }}.{{ $domain }}
+  - host: {{ .Values.appName }}{{ .Values.appUrlSuffix }}.{{ $domain }}
     http:
       paths:
       - backend:
           service:
-            name: reference-service
+            name: {{ .Values.appName }}
             port:
               number: 80
         path: /

@@ -1,3 +1,4 @@
+appName:
 registry:
 domain:
 appUrlSuffix:
@@ -5,12 +6,12 @@ tenantName:
 tag: latest
 monitoring: false
 dashboarding: false
-prometheusEndpoint: http://frontend.platform-monitoring.svc:9090
+prometheusEndpoint:
 
 functional:
-  image: go-reference-app-functional
+  image:
 nft:
-  image: go-reference-app-nft
+  image:
   endpoint: ingress
   resources:
     requests:
@@ -20,7 +21,7 @@ nft:
       cpu: 1000m
       memory: 512Mi
 extended:
-  image: go-reference-app-extended
+  image:
   endpoint: service
   parallelism: 10
   resources:
@@ -31,7 +32,7 @@ extended:
       cpu: 1000m
       memory: 512Mi
 service:
-  image: go-reference-app
+  image:
   replicas: 2
   resources:
     requests:
@@ -40,17 +41,3 @@ service:
     limits:
       cpu: 700m
       memory: 100Mi
-  environmentVariables:
-    DOWNSTREAM_ENDPOINT: "http://wiremock"
-wiremock:
-  enabled: false
-  image: wiremock/wiremock:3.4.2
-  replicas: 2
-  port: 8080
-  resources:
-    requests:
-      cpu: 700m
-      memory: 256Mi
-    limits:
-      cpu: 700m
-      memory: 512Mi

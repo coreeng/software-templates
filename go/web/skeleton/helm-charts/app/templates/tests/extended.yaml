@@ -1,18 +1,18 @@
-{{- $endpoint := "http://reference-service" }}
+{{- $endpoint := printf "https://%s" .Values.appName }}
 {{- if eq .Values.extended.endpoint "ingress" }}
-  {{- $endpoint = printf "https://reference-app%s.%s" .Values.appUrlSuffix .Values.domain }}
+  {{- $endpoint = printf "https://%s%s.%s" .Values.appName .Values.appUrlSuffix .Values.domain }}
 {{- end}}
 ---
 apiVersion: k6.io/v1alpha1
 kind: TestRun
 metadata:
-  name: "reference-app-extended-test"
+  name: "{{ .Values.appName }}-extended-test"
   annotations:
     "helm.sh/hook": test
 spec:
   parallelism: {{ .Values.extended.parallelism }}
   script:
-    localFile: ./load-testing/downstream.js
+    localFile: ./load-testing/hello.js
   ports:
     - containerPort: 5656
   runner:
@@ -24,10 +24,6 @@ spec:
     env:
       - name: SERVICE_ENDPOINT
         value: {{ $endpoint }}
-      - name: WIREMOCK_PORT
-        value: "{{ .Values.wiremock.port }}"
-      - name: WIREMOCK_REPLICAS
-        value: "{{ .Values.wiremock.replicas }}"
       - name: REQ_PER_SECOND
         value: "10000"
       - name: VUS
@@ -40,7 +36,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "reference-app-extended-test-validate"
+  name: "{{ .Values.appName }}-extended-test-validate"
   annotations:
     "helm.sh/hook": test
 spec:

@@ -13,7 +13,6 @@ COPY --from=builder /tmp/k6 /usr/bin/k6
 USER 12345
 WORKDIR /home/k6
 
-ADD ./nft/ /home/k6
 ADD ./resources/load-testing/ /home/k6/load-testing
 
 ENV K6_OUT=prometheus

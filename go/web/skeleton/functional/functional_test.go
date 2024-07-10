@@ -1,4 +1,4 @@
-package godogs
+package functional
 
 import (
 	"errors"

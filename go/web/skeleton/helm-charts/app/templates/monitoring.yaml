@@ -3,14 +3,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: reference-service
+  name: {{ .Values.appName }}
   labels:
-    app.kubernetes.io/name: reference-service
+    app.kubernetes.io/name: {{ .Values.appName }}
     monitoring/instance: {{ .Values.tenantName }}
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: reference-service
+      app.kubernetes.io/name: {{ .Values.appName }}
   endpoints:
   - interval: 30s
     port: metrics
