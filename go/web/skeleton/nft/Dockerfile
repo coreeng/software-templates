@@ -1,4 +1,4 @@
-FROM golang:1.21.0-alpine3.18 AS builder
+FROM golang:1.22-alpine3.18 AS builder
 WORKDIR $GOPATH/src/go.k6.io/k6
 RUN apk --no-cache add git
 RUN go install go.k6.io/xk6/cmd/xk6@v0.11.0

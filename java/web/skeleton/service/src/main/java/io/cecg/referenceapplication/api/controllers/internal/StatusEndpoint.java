@@ -9,7 +9,6 @@ import org.springframework.util.MimeTypeUtils;
 @Component
 @Endpoint(id = "status")
 public class StatusEndpoint {
-
     @ReadOperation(produces = MimeTypeUtils.APPLICATION_JSON_VALUE)
     public StatusResponse status() {
         return new StatusResponse("OK");
