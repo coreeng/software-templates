@@ -26,8 +26,12 @@ spec:
               path: /health
           readinessProbe:
             httpGet:
-              port: 8080
-              path: /hello
+              port: 8081
+              path: /health
+          startupProbe:
+            httpGet:
+              port: 8081
+              path: /health
           {{- if .Values.service.environmentVariables }}
           env:
             {{- range $key, $value := .Values.service.environmentVariables }}
