@@ -23,7 +23,7 @@ spec:
           livenessProbe:
             httpGet:
               port: 8081
-              path: /internal/status
+              path: /health
           readinessProbe:
             httpGet:
               port: 8080
