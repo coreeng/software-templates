@@ -1,202 +1,195 @@
 # Java Web
 
-## Path to Production (P2P) Interface
+Java application for the Core Platform.
 
-The P2P interface is how the generated pipelines interact with the repo.
-For the CECG reference this follows the [3 musketeers pattern](https://3musketeers.io/) of using:
+# Parameters
+Update main parameters of templates in `Makefile`:
+- `app_name` - name of the application. it defines the name of the images produced by the Makefile targets, kubernetes resources, etc.
 
+# Path to Production (P2P)
+
+The P2P uses GitHub Actions to interact with the platform.
+
+As part of the P2P, using Hierarchical Namespace Controller, child namespaces will be created:
+- `<tenant-name>-functional`
+- `<tenant-name>-nft`
+- `<tenant-name>-extended`
+
+The application is deployed to each of this following the shape:
+```
+| Build Service | -> | Functional testing | -> | NF testing | -> | Promote image to Extended tests |
+```
+
+The tests are executed as helm tests. For that to work, each test phase is packaged in a docker image and pushed to a registry.
+It's then executed after the deployment of the respective environment to ensure the service is working correctly.
+
+You can run `make help-p2p` to list the available p2p functions or `help-all` to see all available functions.
+
+#### Requirements
+
+The interface between the P2P and the application is `Make`.
+For everything to work for you locally you need to ensure you have the following tools installed on your machine:
 * Make
 * Docker
-* Compose
+* Kubectl
+* Helm
 
-These all need to be installed.
+#### Prerequisites for local run
+To run the P2P locally, you need to connect to a cloud development environment.
+The easiest way to [do that is using `corectl`](https://docs.gcp-prod.cecg.platform.cecg.io/platform/#using-corectl).
 
-## Path to Production (P2P) Tooling
+#### Image Versioning
 
-### GitHub Actions
-
-ci.yaml in [.github/workflows](.github/workflows) shows how GitHub actions can execute
-This same GitHub action can be used for many repos using different technologies as long as the same Make targets are defined.
-
-
-## Structure
-
-### Service
-
-Service source code, using Java with Sprint Boot.
-
-### Functional
-
-Stubbed Functional Tests using [Cucumber JVM](https://cucumber.io/docs/installation/java/)
-
-### NFT
-
-Load tests using [K6](https://k6.io/).
-
-## Running the application locally
-
-### Application
+The version is automatically generated when running the pipeline in GitHub Actions, but when you build the image
+locally using `p2p-build` you may need to specify `VERSION` when running `make` command.
 
 ```
-make run-local
+make VERSION=1.0.0 p2p-build
 ```
 
-This application is exposed locally on port 8080 as well as being available to the tests when run with make.
-This is as they are in the same docker network.
+#### Building on arm64
 
-### Functional Tests
-
-```
-make stubbed-functional
-```
-
-You should see:
+If you are on `arm64` you may find that your Docker image is not starting on the target host. This may be because of
+the incompatible target platform architecture. You may explicitly require that the image is built for `linux/amd64` platform:
 
 ```
-io.cecg.reference.Tests.hello world returns ok PASSED
+DOCKER_DEFAULT_PLATFORM="linux/amd64" make p2p-build
 ```
-
-### Non-Functional Tests
-
-```
-make stubbed-nft
-```
-
-You should see:
-
-```
-     checks.........................: 100.00% ✓ 6581      ✗ 0
-     data_received..................: 829 kB  14 kB/s
-     data_sent......................: 546 kB  9.0 kB/s
-     http_req_blocked...............: avg=156.98µs min=6.95µs   med=35.04µs  max=23.34ms p(90)=117.7µs  p(95)=356.83µs
-     http_req_connecting............: avg=47.77µs  min=0s       med=0s       max=14.68ms p(90)=0s       p(95)=0s
-     http_req_duration..............: avg=3.54ms   min=205.7µs  med=2.5ms    max=41.28ms p(90)=7.7ms    p(95)=10.01ms
-       { expected_response:true }...: avg=3.54ms   min=205.7µs  med=2.5ms    max=41.28ms p(90)=7.7ms    p(95)=10.01ms
-     http_req_failed................: 0.00%   ✓ 0         ✗ 6581
-     http_req_receiving.............: avg=501.79µs min=49.87µs  med=275.91µs max=24.07ms p(90)=911.58µs p(95)=1.51ms
-     http_req_sending...............: avg=561.45µs min=25.83µs  med=168.25µs max=27.79ms p(90)=1.37ms   p(95)=2.51ms
-     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       max=0s      p(90)=0s       p(95)=0s
-     http_req_waiting...............: avg=2.48ms   min=103.75µs med=1.49ms   max=39.93ms p(90)=5.65ms   p(95)=7.85ms
-     http_reqs......................: 6581    107.83203/s
-     iteration_duration.............: avg=1s       min=1s       med=1s       max=1.04s   p(90)=1.01s    p(95)=1.01s
-     iterations.....................: 6581    107.83203/s
-     vus............................: 14      min=9       max=200
-     vus_max........................: 200     min=200     max=200
-```
-
-## How to run the service in minikube
-
-### Install Prerequisites
-
-* A minikube cluster i.e. you've run `minikube start --insecure-registry=minikube:5000`
-  * You need to enable the ingress addon by executing: `minikube addons enable ingress` and then follow the instructions from the output e.g. if on mac run `minikube tunnel`
-* Kubectl or use `minikube kubectl`
-
-### Registries
-
-You'll need a registry. For the purposes of the local development, we will be using a local registry. The Makefile
-`registry` and  `image_name` variables should be updated with your newly created registry details.
-
-### Set up a local registry
-
-How to set up a local registry on minikube:
-
-* Enable the registry addon by executing: `minikube addons enable registry`
-* The registry will be exposed on port 5000
-* As the registry operates over an insecure connection, the Docker flag `--insecure-registry` will need to be set, so you need to run: `minikube start --insecure-registry minikube:5000`
-
-For Mac users: please follow the instruction here: https://minikube.sigs.k8s.io/docs/handbook/registry/#docker-on-macos .
-You will need to redirect port 5000 on the docker virtual machine over to port 5000 on the minikube machine.
-Then you will be able to access your local registry on `localhost:5000`.
 
 #### Push the image
 
-Prerequisites:
-
-- The `registry` in the [Makefile](Makefile) should be updated with your newly created registry.
-
+There's a shared tenant registry created `europe-west2-docker.pkg.dev/<project_id>/tenant`. You'll need to set your project_id and export this string as an environment variable called `REGISTRY`, for example:
 ```
-make docker-build
-make docker-push
+export REGISTRY=europe-west2-docker.pkg.dev/<project_id>/tenant
 ```
 
-### Deploy the service
+#### Ingress URL construction
 
-Prerequisites:
+For ingress to be configured correctly,
+you'll need to set up the environment that you want to deploy to, as well as the base url to be used.
+This must match one of the `ingress_domains` configured for that environment. For example, inside CECG we have an environment called `gcp-dev` that's ingress domain is set to `gcp-dev.cecg.platform.cecg.io`.
 
-- if your local registry is not on `minikube:5000` you will need to update the [deployment yml](service/k8s-manifests/deployment-minikube.yml)
-  to pull the image from your local repository. e.g: `localhost:5000` if you are using docker machine on Mac and you followed the registry setup steps from above.
+This reference app assumes `<environment>.<domain>`, check with your deployment of the Core Platform if this is the case.
 
-Create the namespace, secrets and the deployments:
-
-```
-kubectl apply -f service/k8s-manifests/namespace.yml
-kubectl apply -f service/k8s-manifests/pv-dbdata.yml
-kubectl apply -f service/k8s-manifests/pvc-dbdata.yml
-kubectl apply -f service/k8s-manifests/secret-db.yml
-kubectl apply -f service/k8s-manifests/deployment-minikube.yml
-```
-
-Deploy the ingress and service:
+This will construct the base URL as `<environment>.<domain>`, for example, `gcp-dev.cecg.platform.cecg.io`.
 
 ```
-kubectl apply -f service/k8s-manifests/expose.yml
+export BASE_DOMAIN=gcp-dev.cecg.platform.cecg.io 
 ```
 
-Check that the service is running:
+Read [more](https://docs.gcp-prod.cecg.platform.cecg.io/app/ingress/) about Ingress.
+
+#### Logs
+
+You may find the results of the test runs in Grafana. The pipeline generates a link with the specific time range.
+
+To generate a correct link to Grafana you need to make sure you have `INTERNAL_SERVICES_DOMAIN` set up.
 
 ```
-kubectl get pods -n reference-service-showcase
-NAME                                 READY   STATUS    RESTARTS   AGE
-reference-service-7cff68d485-q8mw5   1/1     Running   0          142m
+export INTERNAL_SERVICES_DOMAIN=gcp-dev-internal.cecg.platform.cecg.io 
 ```
 
-Check that the ingress is created:
+## Functional Testing
+
+Stubbed Functional Tests using [Cucumber Java](https://cucumber.io/docs/installation/java/)
+
+This namespace is used to test the functionality of the app. Currently, using BDD (Behaviour driven development)
+
+## NFT
+
+This namespace is used to test how the service behaves under load, e.g. 1_000 TPS, P99 latency < 500 ms for 3 minutes run.
+
+There are 1 endpoint available for testing:
+- `/hello` - simply returns `Hello world`.
+
+#### Load Generation
+
+We are using [K6](https://k6.io/) to generate constant load, collect metrics and validate them against thresholds.
+
+There is a test examples: [hello.js](./resources/load-testing/hello.js)
+
+`helm test` runs K6 scenario in a single Pod.
+
+#### Platform Ingress
+
+We can send the traffic to the reference app either via ingress endpoint or directly via service endpoint.
+
+There is `nft.endpoint` parameter in `values.yaml` that can be set to `ingress` or `service`.
+
+## Extended test
+
+This is similar to NFT, but generates much higher load and runs longer, e.g. 10_000 TPS, P99 latency < 500 ms for 10 minutes run.
+
+By default, the extended test is disabled. In order to enable it, you need to explicitly override the variable
 
 ```
-kubectl get ingress -n reference-service-showcase
-NAME                CLASS   HOSTS   ADDRESS        PORTS   AGE
-reference-service   nginx   *       192.168.49.2   80      144m
+make RUN_EXTENDED_TEST=true p2p-extended-test
 ```
 
-If on Linux you can now access the service on the IP address (which is the minikube IP).
+or change `RUN_EXTENDED_TEST` to `true` in `Makefile`.
+
+#### Load Generation
+
+We are using [K6](https://k6.io/) to generate the load.
+We are using [K6 Operator](https://github.com/grafana/k6-operator) to run multiple jobs in parallel, so that we can reach high
+TPS requirements.
+
+When running parallel jobs with K6 Operator we are not getting back the aggregated metrics at the end of the test.
+We are collecting the metrics with Prometheus and validating the results with `promtool`.
+
+#### Platform Ingress
+
+We can send the traffic to the reference app either via ingress endpoint or directly via service endpoint.
+See NFT section for more details.
+
+## Platform Features
+
+> Due to the restrictions applied to your platform you may not be able to enable some of the features
+
+### Monitoring
+
+This feature is needed to allow metrics collection by Prometheus. It needs the metric store (prometheus) to be installed on the parent namespace e.g. `TENANT_NAME`.
+
+By default, Monitoring is disabled. In order to enable it, you need to explicitly override the variable
 
 ```
-curl localhost/service/hello
-Hello World!%
+make MONITORING=true p2p-nft
 ```
 
-If this doesn't work ensure you followed the instructions when enabling the minikube ingress addon.
+or change `MONITORING` to `true` in `Makefile`.
 
-### Run the functional tests against deployed application
+### Dashboarding
 
-This shows how you can run the same tests locally and on a deployed version using the `SERVICE_ENDPOINT` environment variable.
+This feature allows you to automatically import dashboard definitions to Grafana.
 
-E.g: For a local run:
+> You may import the dashboard manually by uploading the json definition via browser
 
-```
-SERVICE_ENDPOINT="http://localhost:8080" ./gradlew functional:test
-```
-
-### Run the non-functional tests against deployed application
-
-For a local run: 
+By default, `DASHBOARDING` is disabled. In order to enable it, you need to explicitly override the variable
 
 ```
-SERVICE_ENDPOINT="http://localhost:8080" k6 run ./nft/ramp-up/test.js
+make DASHBOARDING=true p2p-nft
 ```
 
+or change `DASHBOARDING` to `true` in `Makefile`.
 
-### Support for Kubernetes
-Helm charts have been created for ref-app and it's dependencies that deploy the reference-app and DB. There are chart tests that execute both the NFT and Functional tests.
-Some parameters like the registry still need to be manually changed, like the `registry` (with localhost as default) inside the Makefile. After that you can run the commands:
-```shell
-make docker-build-push-all
-make helm-deploy
-make helm-test
+The reference app comes with `10k TPS Reference App` dashboard that shows the TPS and latency
+for the load generator, ingress, API server and its downstream dependency.
+
+This feature depends on metrics collected by `Service Monitor`.
+
+### K6 Operator
+
+> K6 Operator must be enabled for the tenant to run the extended test
+
+You can enable it by enabling the beta feature in the tenant.yaml file:
+```yaml
+betaFeatures:
+  - k6-operator
 ```
-You can also pass registry at runtime as an argument to Makefile, for ex: 
-```
-REGISTRY=minikube:5000 make <target you want to execute>
-```
-  
+
+## Limiting the CPU usage
+
+When running load tests it is important that we define CPU resource limits. This will allow us to have stable results between runs.
+
+If we don't apply the limits then the performance of the Pods will depend on the CPU utilization of the node that is running the container.
+

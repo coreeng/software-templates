@@ -4,13 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/go-resty/resty/v2"
-	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,7 +16,6 @@ var baseUri = getBaseURI()
 var ingressBaseUri = getIngressBaseUrl()
 var request *resty.Request
 var response resty.Response
-var UUID string
 
 func aRestService() {
 	httpClient := resty.New()
@@ -66,27 +63,11 @@ func anOkResponseIsReturned() error {
 	return fmt.Errorf("response not successful, response code: %d, error: %v", response.StatusCode(), response.Error())
 }
 
-func theResponseBodyIs(responseBody *godog.DocString) error {
-	log.Printf("Response body as string is: %s", response.String())
-	log.Printf("actual response body: %s", responseBody.Content)
-	if !strings.EqualFold(response.String(), responseBody.Content) {
-		return fmt.Errorf("expected responseBody : %s did not match actual: %s", responseBody.Content, response.String())
-	}
-	return nil
-}
-
-func aRandomUUID() {
-	generatedUUID, _ := uuid.NewV4()
-	UUID = generatedUUID.String()
-}
-
 func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^a rest service$`, aRestService)
 	ctx.Step(`^an ok response is returned$`, anOkResponseIsReturned)
 	ctx.Step(`^I call the hello world endpoint$`, iCallTheHelloWorldEndpoint)
 	ctx.Step(`^I call the ingress hello world endpoint and wait for it to be ready$`, iCallTheIngressHelloWorldEndpointAndWaitForItToBeReady)
-	ctx.Step(`^the response body is$`, theResponseBodyIs)
-	ctx.Step(`^a random UUID$`, aRandomUUID)
 }
 
 func getBaseURI() string {

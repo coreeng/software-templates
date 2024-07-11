@@ -1,26 +1,33 @@
 package io.cecg.referenceapplication;
 
 
-import io.cecg.referenceapplication.api.dtos.ErrorResponse;
+import io.cecg.referenceapplication.api.dtos.ErrorResponseBody;
 import io.cecg.referenceapplication.api.exceptions.ApiException;
-import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ControllerAdvice
 @ResponseBody
 public class MainExceptionHandler {
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    private static final Logger log = LoggerFactory.getLogger(MainExceptionHandler.class);
+
     @ExceptionHandler(Exception.class)
-    public ErrorResponse handleGenericException(Exception e) {
-        return new ErrorResponse(String.format("Something went wrong: %s", e.getMessage()));
+    public ResponseEntity<ErrorResponseBody> handleGenericException(Exception e) {
+        if (e instanceof ErrorResponse er) {
+            return ResponseEntity.status(er.getStatusCode())
+                    .body(new ErrorResponseBody(String.format("Something went wrong: %s", e.getMessage())));
+        }
+        return ResponseEntity.internalServerError()
+                .body(new ErrorResponseBody(String.format("Something went wrong: %s", e.getMessage())));
     }
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(ApiException e) {
-        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), e.getStatusCode());
+    public ResponseEntity<ErrorResponseBody> handleApiException(ApiException e) {
+        return new ResponseEntity<>(new ErrorResponseBody(e.getMessage()), e.getStatusCode());
     }
 }
