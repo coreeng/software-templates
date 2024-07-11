@@ -5,7 +5,6 @@ Golang application for the Core Platform.
 # Parameters
 Update main parameters of templates in `Makefile`:
 - `app_name` - name of the application. it defines the name of the images produced by the Makefile targets, kubernetes resources, etc.
-- `tenant_name` - tenant of the application. it defines target namespaces to deploy the application, deployed monitoring stack to associate the application to, etc.
 
 # Path to Production (P2P)
 
