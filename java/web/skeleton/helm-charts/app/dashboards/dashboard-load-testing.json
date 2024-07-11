@@ -523,7 +523,7 @@
             "uid": "cecg-managed-prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_server_duration_milliseconds_count{namespace=\"$namespace\", job=\"reference-service\"}[${__interval}]))",
+          "expr": "sum(rate(http_server_requests_seconds_count{namespace=\"$namespace\", job=\"reference-service\"}[${__interval}]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -617,7 +617,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "histogram_quantile(0.99, sum(rate(http_server_duration_milliseconds_bucket{namespace=\"$namespace\", job=\"reference-service\"}[${__interval}])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{namespace=\"$namespace\", job=\"reference-service\"}[${__interval}])) by (le))",
           "format": "time_series",
           "instant": false,
           "legendFormat": "__auto",

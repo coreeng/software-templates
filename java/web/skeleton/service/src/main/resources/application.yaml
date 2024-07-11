@@ -5,10 +5,16 @@ management:
     web:
       base-path: /
       exposure:
-        include: health, metrics, prometheus
+        include: health, prometheus
   endpoint:
     status.enabled: true
     shutdown.enabled: false
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
   graphite:
     metrics:
       export:
