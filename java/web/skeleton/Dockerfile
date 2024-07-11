@@ -2,7 +2,7 @@ FROM gradle:jdk21 AS build
 WORKDIR /build/
 COPY . .
 
-RUN ./gradlew service:build --no-daemon
+RUN gradle service:build --no-daemon
 
 FROM registry.access.redhat.com/ubi8/openjdk-21
 WORKDIR /
