@@ -35,11 +35,11 @@ service:
   image:
   replicas: 1
   environmentVariables:
-    JVM_OPTS: "-Xmx50m -Xms50m"
+    JVM_OPTS: "-Xmx100m -Xms100m"
   resources:
     requests:
       cpu: 700m
-      memory: 150Mi
+      memory: 300Mi
     limits:
       cpu: 700m
-      memory: 150Mi
+      memory: 300Mi

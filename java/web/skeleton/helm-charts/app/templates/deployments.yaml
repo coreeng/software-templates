@@ -29,7 +29,7 @@ spec:
               port: 8081
               path: /health
           startupProbe:
-            initialDelay: 20
+            initialDelaySeconds: 20
             httpGet:
               port: 8081
               path: /health
