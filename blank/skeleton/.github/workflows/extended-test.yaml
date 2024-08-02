@@ -17,6 +17,6 @@ jobs:
 
   extendedtests:
     needs: [get-latest-version]
-    uses: coreeng/p2p/.github/workflows/p2p-workflow-extended-test.yaml@v1
+    uses: coreeng/p2p/.github/workflows/p2p-workflow-extended-test.yaml@v1.6.45
     with:
       version: ${{ needs.get-latest-version.outputs.version }}

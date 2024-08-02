@@ -197,14 +197,10 @@ deploy-prod: ## Deploy helm chart of the app to production namespace
 
 .PHONY: p2p-promote-generic
 p2p-promote-generic:  ## Generic promote functionality
-	@echo "$(red) Retagging version ${image_tag} from $(SOURCE_REGISTRY) to $(REGISTRY)"
-	export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=$(SOURCE_AUTH_OVERRIDE) ; \
-	gcloud auth configure-docker --quiet europe-west2-docker.pkg.dev; \
-	docker pull $(SOURCE_REGISTRY)/$(source_repo_path)/$(image_name):${image_tag} ; \
-	docker tag $(SOURCE_REGISTRY)/$(source_repo_path)/$(image_name):${image_tag} $(REGISTRY)/$(dest_repo_path)/$(image_name):${image_tag}
-	@echo "$(red) Pushing version ${image_tag}"
-	export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=$(DEST_AUTH_OVERRIDE) ; \
-	docker push $(REGISTRY)/$(dest_repo_path)/$(image_name):${image_tag}
+	corectl p2p promote $(image_name):${image_tag} \
+        		--source-stage $(source_repo_path) \
+        		--dest-registry $(REGISTRY) \
+        		--dest-stage $(dest_repo_path)
 
 .PHONY: p2p-promote-to-extended-test
 p2p-promote-to-extended-test: source_repo_path=$(FAST_FEEDBACK_PATH)
